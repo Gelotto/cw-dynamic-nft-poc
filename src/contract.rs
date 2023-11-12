@@ -4,6 +4,7 @@ use crate::execute::set_config::exec_set_config;
 use crate::execute::Context;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use crate::query::config::query_config;
+use crate::query::token_image::query_token_image;
 use crate::query::token_metadata::query_token_metadata;
 use crate::query::ReadonlyContext;
 use crate::state;
@@ -35,7 +36,11 @@ pub fn execute(
     let ctx = Context { deps, env, info };
     match msg {
         ExecuteMsg::SetConfig(config) => exec_set_config(ctx, config),
-        ExecuteMsg::Mint { owner, metadata } => exec_mint(ctx, owner, metadata),
+        ExecuteMsg::Mint {
+            owner,
+            metadata,
+            svg,
+        } => exec_mint(ctx, owner, metadata, svg),
     }
 }
 
@@ -48,6 +53,7 @@ pub fn query(
     let ctx = ReadonlyContext { deps, env };
     let result = match msg {
         QueryMsg::Config {} => to_json_binary(&query_config(ctx)?),
+        QueryMsg::TokenImage { token_id } => to_json_binary(&query_token_image(ctx, token_id)?),
         QueryMsg::TokenMetadata { token_id } => {
             to_json_binary(&query_token_metadata(ctx, token_id)?)
         },

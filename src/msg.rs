@@ -1,7 +1,10 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Addr;
 
-use crate::state::models::{Config, TokenMetadata};
+use crate::{
+    state::models::{Config, TokenMetadata},
+    svg::Svg,
+};
 
 #[cw_serde]
 pub struct InstantiateMsg {}
@@ -12,6 +15,7 @@ pub enum ExecuteMsg {
     Mint {
         owner: Addr,
         metadata: TokenMetadata,
+        svg: Option<Svg>,
     },
 }
 
@@ -19,6 +23,7 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     Config {},
     TokenMetadata { token_id: String },
+    TokenImage { token_id: String },
 }
 
 #[cw_serde]
@@ -29,3 +34,6 @@ pub struct ConfigResponse(pub Config);
 
 #[cw_serde]
 pub struct TokenMetadataResponse(pub TokenMetadata);
+
+#[cw_serde]
+pub struct TokenImageResponse(pub String);

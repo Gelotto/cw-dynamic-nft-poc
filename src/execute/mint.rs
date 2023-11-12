@@ -3,11 +3,13 @@ use crate::{
     msg::QueryMsg,
     state::{
         models::TokenMetadata,
-        storage::{CW721_ADDR, TOKEN_DATA_NETWORK, TOKEN_ID_COUNTER, TOKEN_METADATA},
+        storage::{CW721_ADDR, TOKEN_ID_COUNTER, TOKEN_METADATA, TOKEN_NETWORK, TOKEN_SVG},
     },
+    svg::Svg,
 };
 use cosmwasm_std::{attr, to_json_binary, Addr, Empty, Response, StdResult, WasmMsg};
 use cw721_base::ExecuteMsg;
+use serde::Serialize;
 
 use super::Context;
 
@@ -15,11 +17,13 @@ pub fn exec_mint(
     ctx: Context,
     owner: Addr,
     metadata: TokenMetadata,
+    svg: Option<Svg>,
 ) -> Result<Response, ContractError> {
     let Context { deps, env, .. } = ctx;
 
     let cw721_addr = CW721_ADDR.load(deps.storage)?;
-    let network = TOKEN_DATA_NETWORK.load(deps.storage)?;
+    let network = TOKEN_NETWORK.load(deps.storage)?;
+    let mut metadata = metadata;
 
     // Get next token ID
     let token_id = TOKEN_ID_COUNTER
@@ -27,15 +31,24 @@ pub fn exec_mint(
         .to_string();
 
     // Build token_uri
-    let token_uri = format!(
-        "cw://{}/{}/{}",
-        network,
-        env.contract.address,
-        to_json_binary(&QueryMsg::TokenMetadata {
+    let token_uri = build_cw_uri(
+        &network,
+        &env.contract.address,
+        &QueryMsg::TokenMetadata {
             token_id: token_id.clone(),
-        })?
-        .to_base64()
-    );
+        },
+    )?;
+
+    if let Some(params) = svg {
+        TOKEN_SVG.save(deps.storage, &token_id, &params)?;
+        metadata.image = Some(build_cw_uri(
+            &network,
+            &env.contract.address,
+            &QueryMsg::TokenImage {
+                token_id: token_id.clone(),
+            },
+        )?)
+    }
 
     TOKEN_METADATA.save(deps.storage, &token_id, &metadata)?;
 
@@ -51,4 +64,20 @@ pub fn exec_mint(
             })?,
             funds: vec![],
         }))
+}
+
+fn build_cw_uri<T>(
+    network: &String,
+    contract_addr: &Addr,
+    msg: &T,
+) -> StdResult<String>
+where
+    T: Serialize + ?Sized,
+{
+    Ok(format!(
+        "cw://{}/{}/{}",
+        network,
+        contract_addr,
+        to_json_binary(&msg)?.to_base64()
+    ))
 }
