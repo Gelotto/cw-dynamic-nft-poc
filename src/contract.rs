@@ -1,13 +1,17 @@
 use crate::error::ContractError;
-use crate::execute::{exec_set_config, Context};
+use crate::execute::mint::exec_mint;
+use crate::execute::set_config::exec_set_config;
+use crate::execute::Context;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
-use crate::query::{query_config, ReadonlyContext};
+use crate::query::config::query_config;
+use crate::query::token_metadata::query_token_metadata;
+use crate::query::ReadonlyContext;
 use crate::state;
 use cosmwasm_std::{entry_point, to_json_binary};
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response};
 use cw2::set_contract_version;
 
-const CONTRACT_NAME: &str = "crates.io:cw-contract-template";
+const CONTRACT_NAME: &str = "crates.io:cw-gelotto-minter";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[entry_point]
@@ -31,6 +35,7 @@ pub fn execute(
     let ctx = Context { deps, env, info };
     match msg {
         ExecuteMsg::SetConfig(config) => exec_set_config(ctx, config),
+        ExecuteMsg::Mint { owner, metadata } => exec_mint(ctx, owner, metadata),
     }
 }
 
@@ -43,6 +48,9 @@ pub fn query(
     let ctx = ReadonlyContext { deps, env };
     let result = match msg {
         QueryMsg::Config {} => to_json_binary(&query_config(ctx)?),
+        QueryMsg::TokenMetadata { token_id } => {
+            to_json_binary(&query_token_metadata(ctx, token_id)?)
+        },
     }?;
     Ok(result)
 }
